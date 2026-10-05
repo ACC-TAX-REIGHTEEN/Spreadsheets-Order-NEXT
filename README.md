@@ -4,6 +4,12 @@
 
 Aplikasi web dua file (`Code.gs` + `Index.html`) yang di-deploy sebagai **Google Apps Script Web App**. Sales membuka URL form, login tervalidasi otomatis dari email Google, mengisi order (nama sales, kategori, kota, customer multi-pilih, foto opsional), dan satu klik kirim menyimpan data ke Spreadsheet tujuan sekaligus mengupload foto ke Google Drive.
 
+Proyek ini digunakan untuk mendukung proyek lain:
+- [AR Orderan — Machine Learning](https://github.com/ACC-TAX-REIGHTEEN/AR-Orderan-MachineLearning)
+  Di mana proyek ini memiliki kelemahan jika dataset yang digunakan untuk melatih ML memiliki celah data atau khususnya data baru yang belum di petakan secara manual oleh manusia.
+- [Automasi AR Orderan](https://github.com/ACC-TAX-REIGHTEEN/Automasi-AR-Orderan)
+  Proyek ini juga memiliki kerentanan akan kode pelanggan yang salah di masukkan oleh tim lapangan. Dikarenakan berbagai faktor. Menyebabkan proses otomatisasi salah memberikan data dan membuat lebih banyak pekerjaan kepada admin. 
+
 ---
 
 ## 📋 Daftar Isi
