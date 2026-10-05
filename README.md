@@ -4,11 +4,17 @@
 
 Aplikasi web dua file (`Code.gs` + `Index.html`) yang di-deploy sebagai **Google Apps Script Web App**. Sales membuka URL form, login tervalidasi otomatis dari email Google, mengisi order (nama sales, kategori, kota, customer multi-pilih, foto opsional), dan satu klik kirim menyimpan data ke Spreadsheet tujuan sekaligus mengupload foto ke Google Drive.
 
-Proyek ini digunakan untuk mendukung proyek lain:
-- [AR Orderan — Machine Learning](https://github.com/ACC-TAX-REIGHTEEN/AR-Orderan-MachineLearning)
-  Di mana proyek ini memiliki kelemahan jika dataset yang digunakan untuk melatih ML memiliki celah data atau khususnya data baru yang belum di petakan secara manual oleh manusia.
-- [Automasi AR Orderan](https://github.com/ACC-TAX-REIGHTEEN/Automasi-AR-Orderan)
-  Proyek ini juga memiliki kerentanan akan kode pelanggan yang salah di masukkan oleh tim lapangan. Dikarenakan berbagai faktor. Menyebabkan proses otomatisasi salah memberikan data dan membuat lebih banyak pekerjaan kepada admin. 
+## 🔗 Keterkaitan dengan Ekosistem Proyek
+
+Aplikasi Web App ini berperan penting sebagai **garda terdepan pengumpulan & validasi data** untuk mendukung dua proyek utama lainnya:
+
+1. **[AR Orderan — Machine Learning](https://github.com/ACC-TAX-REIGHTEEN/AR-Orderan-MachineLearning)**
+   * **Masalah:** Model Machine Learning berisiko mengalami penurunan akurasi atau gagal membuat prediksi jika dataset latihan memiliki celah (*data gap*) atau menerima data baru yang belum dipetakan secara manual oleh manusia.
+   * **Peran Web App Ini:** Memastikan data order yang diinput dari lapangan terstruktur, memiliki format yang konsisten, serta mencatat entitas baru (seperti *New Outlet Order / NOO*) secara sistematis agar dapat dipetakan dengan tepat.
+
+2. **[Automasi AR Orderan](https://github.com/ACC-TAX-REIGHTEEN/Automasi-AR-Orderan)**
+   * **Masalah:** Proses otomatisasi rentan terganggu akibat kesalahan ketik (*human error*) pada kode atau nama pelanggan oleh tim lapangan, sehingga menimbulkan data yang salah dan menambah beban kerja tim admin.
+   * **Peran Web App Ini:** Menyediakan fitur pencarian pelanggan *real-time* dan *multi-select* berbasis master data Google Sheets, sehingga mencegah tim lapangan memasukkan kode pelanggan yang salah sejak awal.
 
 ---
 
