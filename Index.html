@@ -1,1 +1,320 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding-bottom: 40px; }
+    .card-form { max-width: 650px; margin: 30px auto; border: none; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+    .card-header { background: #0d6efd; color: white; border-radius: 12px 12px 0 0 !important; padding: 20px; }
+    .customer-list-box { max-height: 250px; overflow-y: auto; border: 1px solid #ced4da; border-radius: 6px; padding: 8px; background: #fff; }
+    .customer-item { padding: 6px 10px; border-bottom: 1px solid #f1f1f1; display: flex; align-items: center; }
+    .customer-item:last-child { border-bottom: none; }
+    .customer-item input { margin-right: 10px; }
+    .selected-badge { display: inline-block; background: #e7f1ff; color: #0d6efd; border: 1px solid #9ec5fe; padding: 4px 10px; border-radius: 15px; font-size: 12px; margin: 2px; }
+    .noo-box { background-color: #fff3cd; border: 1px solid #ffe69c; border-radius: 6px; padding: 10px; margin-top: 8px; }
+  </style>
+</head>
+<body>
 
+<div class="container">
+  <div class="card card-form">
+    <div class="card-header text-center">
+      <h3 id="companyTitle" class="fw-bold mb-1">PT PRIMA TUNGGAL MANDIRI</h3>
+      <h5 class="mb-1 text-white-50">Form Input Order Penjualan</h5>
+      <small id="userEmailBadge" class="opacity-75"></small>
+    </div>
+    <div class="card-body p-4">
+
+      <div id="loadingState" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2 text-muted">Memuat data form, mohon tunggu...</p>
+      </div>
+
+      <div id="accessDeniedState" class="alert alert-danger d-none" role="alert">
+        <h5 class="alert-heading">Akses Ditolak!</h5>
+        <div id="accessDeniedDetails"></div>
+      </div>
+
+      <form id="orderForm" class="d-none">
+        
+        <div class="mb-3">
+          <label class="form-label fw-bold">Nama Sales <span class="text-danger">*</span></label>
+          <select id="salesSelect" class="form-select" required></select>
+        </div>
+
+        <div id="categoryContainer" class="mb-3 d-none">
+          <label class="form-label fw-bold">Kategori</label>
+          <select id="categorySelect" class="form-select"></select>
+        </div>
+
+        <div id="cityContainer" class="mb-3 d-none">
+          <label class="form-label fw-bold">Kota Customer</label>
+          <select id="citySelect" class="form-select"></select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-bold">Kode & Nama Customer <span class="text-danger">*</span></label>
+          <input type="text" id="searchCustomer" class="form-control mb-2" placeholder="Ketik untuk mencari pelanggan (Kode / Nama / Kontak)...">
+          
+          <div class="customer-list-box" id="customerListBox">
+            <div class="text-muted small text-center py-2">Ketik di kotak pencarian untuk menampilkan pelanggan</div>
+          </div>
+
+          <div id="nooInputBox" class="noo-box d-none">
+            <label class="form-label fw-bold text-warning-emphasis mb-1 small">Input Nama Outlet Baru (NOO):</label>
+            <input type="text" id="nooNameInput" class="form-control form-control-sm" placeholder="Contoh: Toko Maju Jaya Baru">
+          </div>
+          
+          <div class="mt-2">
+            <small class="fw-bold text-muted">Pelanggan Terpilih:</small>
+            <div id="selectedCustomersBadges" class="mt-1">
+              <span class="text-muted small">Belum ada yang dipilih</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="photoContainer" class="mb-4 d-none">
+          <label class="form-label fw-bold">Foto Orderan</label>
+          <input type="file" id="photoInput" class="form-control" accept="image/*">
+        </div>
+
+        <button type="submit" id="submitBtn" class="btn btn-primary w-100 py-2 fw-bold">Kirim Orderan</button>
+      </form>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  let allCustomers = [];
+  let selectedCustomersMap = new Map();
+
+  window.onload = function() {
+    google.script.run
+      .withSuccessHandler(initForm)
+      .withFailureHandler(function(err) {
+        alert("Gagal memuat data: " + err);
+      })
+      .getInitialData();
+  };
+
+  function initForm(data) {
+    document.getElementById('loadingState').classList.add('d-none');
+    document.getElementById('companyTitle').innerText = data.companyName || "PT PRIMA TUNGGAL MANDIRI";
+    document.getElementById('userEmailBadge').innerText = "Login sebagai: " + data.userEmail;
+
+    if (!data.salesInfo.isAllowed) {
+      const debugMsg = data.salesInfo.debugError ? `<br><br><small class="text-muted"><b>Detail Diagnosa:</b> ${data.salesInfo.debugError}</small>` : '';
+      document.getElementById('accessDeniedDetails').innerHTML = `
+        <p class="mb-0">Surel Anda (<b>${data.userEmail}</b>) tidak terdaftar atau tidak memiliki akses ke sheet Sales.${debugMsg}</p>
+      `;
+      document.getElementById('accessDeniedState').classList.remove('d-none');
+      return;
+    }
+
+    document.getElementById('orderForm').classList.remove('d-none');
+
+    const salesSelect = document.getElementById('salesSelect');
+    salesSelect.innerHTML = '<option value="">-- Pilih Sales --</option>';
+    data.salesInfo.salesList.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s;
+      opt.textContent = s;
+      if (s === data.salesInfo.matchedSales) opt.selected = true;
+      salesSelect.appendChild(opt);
+    });
+
+    if (data.configStatus.hasCategory) {
+      const catContainer = document.getElementById('categoryContainer');
+      const catSelect = document.getElementById('categorySelect');
+      catSelect.innerHTML = '<option value="">-- Pilih Kategori --</option>';
+      data.categories.forEach(c => {
+        catSelect.innerHTML += `<option value="${c}">${c}</option>`;
+      });
+      catContainer.classList.remove('d-none');
+    }
+
+    if (data.configStatus.hasCity) {
+      const cityContainer = document.getElementById('cityContainer');
+      const citySelect = document.getElementById('citySelect');
+      citySelect.innerHTML = '<option value="">-- Pilih Kota --</option>';
+      data.cities.forEach(ct => {
+        citySelect.innerHTML += `<option value="${ct}">${ct}</option>`;
+      });
+      cityContainer.classList.remove('d-none');
+    }
+
+    if (data.configStatus.hasPhoto) {
+      document.getElementById('photoContainer').classList.remove('d-none');
+    }
+
+    allCustomers = data.customers;
+    document.getElementById('searchCustomer').addEventListener('input', filterCustomers);
+    filterCustomers();
+  }
+
+  function filterCustomers() {
+    const query = document.getElementById('searchCustomer').value.toLowerCase().trim();
+    const listContainer = document.getElementById('customerListBox');
+    
+    listContainer.innerHTML = '';
+
+    const isNooChecked = selectedCustomersMap.has("NOO") ? 'checked' : '';
+    const nooDiv = document.createElement('div');
+    nooDiv.className = 'customer-item bg-light-subtle fw-bold';
+    nooDiv.innerHTML = `
+      <input type="checkbox" value="NOO" data-name="NOO (Outlet Baru)" ${isNooChecked} onchange="toggleCustomer(this)">
+      <div class="text-primary">[NOO] + Outlet Baru (Customer Belum Terdaftar)</div>
+    `;
+    listContainer.appendChild(nooDiv);
+
+    if (query.length < 2) {
+      return;
+    }
+
+    const matches = [];
+    for (let i = 0; i < allCustomers.length; i++) {
+      const c = allCustomers[i];
+      if (
+        c.code.toLowerCase().includes(query) || 
+        c.name.toLowerCase().includes(query) ||
+        (c.contact && c.contact.toLowerCase().includes(query))
+      ) {
+        matches.push(c);
+        if (matches.length >= 40) break;
+      }
+    }
+
+    matches.forEach(c => {
+      const isChecked = selectedCustomersMap.has(c.code) ? 'checked' : '';
+      const contactInfo = c.contact ? ` <span class="text-muted small">(${c.contact})</span>` : '';
+      const div = document.createElement('div');
+      div.className = 'customer-item';
+      div.innerHTML = `
+        <input type="checkbox" value="${c.code}" data-name="${c.name}" ${isChecked} onchange="toggleCustomer(this)">
+        <div><strong>[${c.code}]</strong> ${c.name}${contactInfo}</div>
+      `;
+      listContainer.appendChild(div);
+    });
+  }
+
+  function toggleCustomer(cb) {
+    const code = cb.value;
+    const name = cb.getAttribute('data-name');
+
+    if (cb.checked) {
+      selectedCustomersMap.set(code, name);
+    } else {
+      selectedCustomersMap.delete(code);
+    }
+
+    if (selectedCustomersMap.has("NOO")) {
+      document.getElementById('nooInputBox').classList.remove('d-none');
+    } else {
+      document.getElementById('nooInputBox').classList.add('d-none');
+    }
+
+    renderBadges();
+  }
+
+  function renderBadges() {
+    const container = document.getElementById('selectedCustomersBadges');
+    if (selectedCustomersMap.size === 0) {
+      container.innerHTML = '<span class="text-muted small">Belum ada yang dipilih</span>';
+      return;
+    }
+
+    container.innerHTML = '';
+    selectedCustomersMap.forEach((name, code) => {
+      const badge = document.createElement('span');
+      badge.className = 'selected-badge';
+      badge.innerHTML = `[${code}] ${name} <a href="#" onclick="removeCustomer('${code}'); return false;" class="text-danger fw-bold ms-1" style="text-decoration:none;">&times;</a>`;
+      container.appendChild(badge);
+    });
+  }
+
+  function removeCustomer(code) {
+    selectedCustomersMap.delete(code);
+    if (code === "NOO") {
+      document.getElementById('nooInputBox').classList.add('d-none');
+    }
+    renderBadges();
+    filterCustomers();
+  }
+
+  document.getElementById('orderForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    if (selectedCustomersMap.size === 0) {
+      alert("Pilih minimal satu Customer!");
+      return;
+    }
+
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+    submitBtn.innerText = "Mengirim Data...";
+
+    const codesArray = [];
+    const namesArray = [];
+
+    const nooNameInput = document.getElementById('nooNameInput').value.trim();
+
+    selectedCustomersMap.forEach((name, code) => {
+      codesArray.push(code);
+      if (code === "NOO" && nooNameInput !== "") {
+        namesArray.push(nooNameInput);
+      } else {
+        namesArray.push(name);
+      }
+    });
+
+    const payload = {
+      salesName: document.getElementById('salesSelect').value,
+      category: document.getElementById('categorySelect') ? document.getElementById('categorySelect').value : "",
+      customerCity: document.getElementById('citySelect') ? document.getElementById('citySelect').value : "",
+      customerCodes: codesArray.join(' & '),
+      customerNames: namesArray.join(' & '),
+      photoData: null,
+      photoName: null,
+      photoMimeType: null
+    };
+
+    const fileInput = document.getElementById('photoInput');
+    if (fileInput && fileInput.files.length > 0) {
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        payload.photoData = evt.target.result;
+        payload.photoName = file.name;
+        payload.photoMimeType = file.type;
+        sendPayload(payload);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      sendPayload(payload);
+    }
+  });
+
+  function sendPayload(payload) {
+    google.script.run
+      .withSuccessHandler(function(res) {
+        alert(res.message);
+        if (res.success) {
+          location.reload();
+        } else {
+          document.getElementById('submitBtn').disabled = false;
+          document.getElementById('submitBtn').innerText = "Kirim Orderan";
+        }
+      })
+      .withFailureHandler(function(err) {
+        alert("Terjadi kesalahan: " + err);
+        document.getElementById('submitBtn').disabled = false;
+        document.getElementById('submitBtn').innerText = "Kirim Orderan";
+      })
+      .submitOrderForm(payload);
+  }
+</script>
+
+</body>
+</html>
